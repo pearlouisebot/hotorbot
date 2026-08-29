@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Hot or Bot — Join the Cohort</title>
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --flame: #FF4500;
+            --cool-blue: #00BFFF;
+            --bg: #0a0a0a;
+            --card: #141414;
+            --border: #222;
+            --text: #fff;
+            --muted: #888;
+            --green: #34c759;
+            --red: #ff3b30;
+        }
+
+        html, body {
+            height: 100%; width: 100%;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* ─── SCREENS ─────────────────────────────────────── */
+        .screen { display: none; min-height: 100vh; }
+        .screen.active { display: flex; flex-direction: column; }
+
+        /* ─── TOP BAR ──────────────────────────────────────── */
+        .topbar {
+            padding: 20px 24px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .logo .hot { color: var(--flame); }
+        .logo .bot { color: var(--cool-blue); }
+
+        .step-indicator {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .step-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background 0.3s;
+        }
+        .step-dot.done { background: var(--green); }
+        .step-dot.active { background: var(--flame); width: 20px; border-radius: 4px; }
+
+        /* ─── SIGNUP SCREEN ────────────────────────────────── */
+        #screen-signup {
+            padding: 0 24px 40px;
+        }
+
+        .signup-hero {
+            text-align: center;
+            padding: 40px 0 36px;
+        }
+
+        .signup-hero h1 {
+            font-size: clamp(28px, 7vw, 42px);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+        .signup-hero h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--flame), #FF8C00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .signup-hero p {
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.5;
+            max-width: 340px;
+            margin: 0 auto;
+        }
+
+        .form-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px 24px;
+            max-width: 440px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 16px;
+            padding: 13px 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--flame);
+        }
+
+        .form-group select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: var(--flame);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 6px;
+        }
+        .btn-primary:hover { opacity: 0.92; }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .fine-print {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ─── PRE-CALL SCREEN ──────────────────────────────── */
+        #screen-precall {
+            align-items: center;
+            justify-content: center;
+            padding: 20px 24px 40px;
+            text-align: center;
+        }
+
+        .avatar-ring {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a78bfa, #f472b6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 52px;
+            margin-bottom: 24px;
+            box-shadow: 0 0 60px rgba(167,139,250,0.25);
+        }
+
+        #screen-precall h2 {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        #screen-precall .subtitle {
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.6;
+            max-width: 320px;
+            margin: 0 auto 32px;
+        }
+
+        .what-to-expect {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: left;
+            max-width: 380px;
+            width: 100%;
+            margin-bottom: 32px;
+        }
+
+        .what-to-expect h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .expect-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .expect-item:last-child { margin-bottom: 0; }
+        .expect-icon { font-size: 18px; flex-shrink: 0; margin-top: -1px; }
+
+        .call-btn {
+            width: 72px; height: 72px;
+            border-radius: 50%; border: none;
+            background: var(--green);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 24px rgba(52,199,89,0.4);
+        }
+        .call-btn:hover { transform: scale(1.08); }
+        .call-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .call-label {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        /* ─── CONNECTING OVERLAY ───────────────────────────── */
+        #connecting-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92); z-index: 200;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+        }
+        .pulse-ring {
+            width: 100px; height: 100px; border-radius: 50%;
+            background: linear-gradient(135deg, #a78bfa, #f472b6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 40px;
+            animation: pulseAnim 1.5s ease-in-out infinite;
+            margin-bottom: 24px;
+        }
+        @keyframes pulseAnim {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(167,139,250,0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(167,139,250,0); }
+        }
+        #connecting-text { font-size: 17px; color: #ccc; }
+        #connecting-sub { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+        /* ─── CALL SCREEN ──────────────────────────────────── */
+        #screen-call {
+            display: none !important;
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh; height: 100dvh;
+            background: #000; z-index: 50; overflow: hidden;
+        }
+        #screen-call.active { display: block !important; flex-direction: unset; }
+
+        #remote-video {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        #local-video {
+            position: fixed; top: 60px; right: 12px;
+            width: 110px; height: 155px;
+            border-radius: 16px; object-fit: cover;
+            transform: scaleX(-1); z-index: 100;
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            cursor: grab;
+        }
+
+        #call-topbar {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 100; padding: 16px 20px;
+            background: linear-gradient(rgba(0,0,0,0.7), transparent);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        #call-topbar .call-name { font-size: 17px; font-weight: 600; }
+
+        .timer-badge {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--flame);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 14px;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            color: var(--flame);
+        }
+        .timer-badge.warning { color: var(--red); border-color: var(--red); }
+
+        #call-controls {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            z-index: 100; padding: 20px 0 44px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.85));
+            display: flex; justify-content: center; gap: 20px;
+        }
+
+        .ctrl-btn {
+            width: 58px; height: 58px; border-radius: 50%; border: none;
+            cursor: pointer; font-size: 22px;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.15s;
+        }
+        .ctrl-btn:hover { transform: scale(1.1); }
+        .ctrl-mute { background: rgba(255,255,255,0.18); color: #fff; }
+        .ctrl-mute.muted { background: var(--red); }
+        .ctrl-end { background: var(--red); color: #fff; font-size: 26px; }
+        .ctrl-beauty { background: rgba(255,255,255,0.18); color: #fff; }
+        .ctrl-beauty.active { background: rgba(255,180,220,0.4); }
+
+        #local-video.beauty-1 { filter: brightness(1.05) contrast(0.95) saturate(1.08) blur(0.3px); }
+        #local-video.beauty-2 { filter: brightness(1.1) contrast(0.9) saturate(1.15) blur(0.5px); }
+        #local-video.beauty-3 { filter: brightness(1.15) contrast(0.85) saturate(1.2) blur(0.8px); }
+
+        /* ─── SUCCESS SCREEN ───────────────────────────────── */
+        #screen-success {
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .success-icon {
+            font-size: 72px;
+            margin-bottom: 24px;
+            animation: bounceIn 0.6s ease-out;
+        }
+        @keyframes bounceIn {
+            from { transform: scale(0.3); opacity: 0; }
+            60% { transform: scale(1.15); }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        #screen-success h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        #screen-success p {
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 320px;
+            margin: 0 auto 32px;
+        }
+
+        .next-steps {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            text-align: left;
+            max-width: 380px;
+            width: 100%;
+        }
+
+        .next-steps h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .next-step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .next-step-item:last-child { margin-bottom: 0; }
+        .next-num {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--flame);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* ─── STATUS TOAST ─────────────────────────────────── */
+        #toast {
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 10px 16px;
+            font-size: 13px; z-index: 300;
+            opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; white-space: nowrap;
+        }
+        #toast.show { opacity: 1; }
+        #toast.error { border-color: var(--red); color: var(--red); }
+    </style>
+</head>
+<body>
+
+<!-- ─── SCREEN 1: SIGN UP ──────────────────────────────────── -->
+<div id="screen-signup" class="screen active">
+    <div class="topbar">
+        <div class="logo"><span class="hot">HOT</span> or <span class="bot">BOT</span></div>
+        <div class="step-indicator">
+            <div class="step-dot active" id="dot-1"></div>
+            <div class="step-dot" id="dot-2"></div>
+            <div class="step-dot" id="dot-3"></div>
+        </div>
+    </div>
+
+    <div class="signup-hero">
+        <h1>Meet your<br><em>AI interviewer.</em></h1>
+        <p>We use video interviews to match you with people who actually get you. No swiping. No small talk. Just real connections.</p>
+    </div>
+
+    <div class="form-card">
+        <div class="form-row">
+            <div class="form-group">
+                <label>First Name</label>
+                <input type="text" id="first-name" placeholder="Amanda" autocomplete="given-name">
+            </div>
+            <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" id="last-name" placeholder="Bradford" autocomplete="family-name">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+        </div>
+
+        <div class="form-group">
+            <label>I'm a</label>
+            <select id="gender">
+                <option value="">Select...</option>
+                <option value="man">Man</option>
+                <option value="woman">Woman</option>
+                <option value="nonbinary">Non-binary</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Looking for</label>
+            <select id="seeking">
+                <option value="">Select...</option>
+                <option value="men">Men</option>
+                <option value="women">Women</option>
+                <option value="everyone">Everyone</option>
+            </select>
+        </div>
+
+        <button class="btn-primary" id="signup-btn" onclick="goToPrecall()">
+            Continue →
+        </button>
+
+        <div class="fine-print">
+            By continuing, you agree to our Terms & Privacy Policy.<br>
+            Your interview video is only shown to cohort members.
+        </div>
+    </div>
+</div>
+
+<!-- ─── SCREEN 2: PRE-CALL ─────────────────────────────────── -->
+<div id="screen-precall" class="screen">
+    <div class="topbar">
+        <div class="logo"><span class="hot">HOT</span> or <span class="bot">BOT</span></div>
+        <div class="step-indicator">
+            <div class="step-dot done"></div>
+            <div class="step-dot active" style="width:20px;border-radius:4px;background:var(--flame)"></div>
+            <div class="step-dot"></div>
+        </div>
+    </div>
+
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 0 24px 40px;">
+        <div class="avatar-ring">👩</div>
+        <h2>Meet Amanda AI</h2>
+        <p class="subtitle">She'll ask you a few questions to build your profile. Your answers become your video card — what other cohort members use to rank you.</p>
+
+        <div class="what-to-expect">
+            <h3>What to expect</h3>
+            <div class="expect-item">
+                <span class="expect-icon">⏱️</span>
+                <span>3 minutes total — she'll keep you on track</span>
+            </div>
+            <div class="expect-item">
+                <span class="expect-icon">🎙️</span>
+                <span>4 questions about you, your life, and what you're looking for</span>
+            </div>
+            <div class="expect-item">
+                <span class="expect-icon">🎬</span>
+                <span>Your video is recorded and shared with cohort members before rank day</span>
+            </div>
+            <div class="expect-item">
+                <span class="expect-icon">💡</span>
+                <span>Be yourself — authenticity ranks higher than polish</span>
+            </div>
+        </div>
+
+        <button class="call-btn" id="call-btn" onclick="startInterview()">📞</button>
+        <div class="call-label">Tap to start your interview</div>
+    </div>
+</div>
+
+<!-- ─── CONNECTING OVERLAY ─────────────────────────────────── -->
+<div id="connecting-overlay">
+    <div class="pulse-ring">👩</div>
+    <div id="connecting-text">Connecting to Amanda AI...</div>
+    <div id="connecting-sub">Getting your interview ready</div>
+</div>
+
+<!-- ─── SCREEN 3: LIVE CALL ────────────────────────────────── -->
+<div id="screen-call" class="screen">
+    <video id="remote-video" autoplay playsinline></video>
+    <video id="local-video" autoplay muted playsinline></video>
+
+    <div id="call-topbar">
+        <div class="call-name">Amanda AI</div>
+        <div class="timer-badge" id="timer">3:00</div>
+    </div>
+
+    <div id="call-controls">
+        <button class="ctrl-btn ctrl-mute" id="mute-btn" onclick="toggleMute()" title="Mute">🎤</button>
+        <button class="ctrl-btn ctrl-beauty" id="beauty-btn" onclick="toggleBeauty()" title="Beauty filter">✨</button>
+        <button class="ctrl-btn ctrl-end" onclick="endInterview()" title="End interview">✕</button>
+    </div>
+</div>
+
+<!-- ─── SCREEN 4: SUCCESS ──────────────────────────────────── -->
+<div id="screen-success" class="screen">
+    <div class="topbar" style="position:absolute;top:0;left:0;right:0;">
+        <div class="logo"><span class="hot">HOT</span> or <span class="bot">BOT</span></div>
+        <div class="step-indicator">
+            <div class="step-dot done"></div>
+            <div class="step-dot done"></div>
+            <div class="step-dot done"></div>
+        </div>
+    </div>
+
+    <div class="success-icon">🎉</div>
+    <h2 id="success-headline">You're in, <span id="success-name"></span>!</h2>
+    <p>Your interview is recorded and queued for the cohort. We'll email you when rank day opens — that's when the magic happens.</p>
+
+    <div class="next-steps">
+        <h3>What happens next</h3>
+        <div class="next-step-item">
+            <div class="next-num">1</div>
+            <div>Your interview video is shared with cohort members anonymously</div>
+        </div>
+        <div class="next-step-item">
+            <div class="next-num">2</div>
+            <div>Everyone watches videos and ranks their top matches</div>
+        </div>
+        <div class="next-step-item">
+            <div class="next-num">3</div>
+            <div>Top mutual matches get invited to a live video date</div>
+        </div>
+        <div class="next-step-item">
+            <div class="next-num">4</div>
+            <div>After live dates, everyone submits their final rank list</div>
+        </div>
+        <div class="next-step-item">
+            <div class="next-num">5</div>
+            <div>The algorithm runs. Match day results sent by email 🔥</div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── TOAST ──────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────
+const TAVUS_API_KEY = '563bceffa0bb4db88435bbe9c69df4ce';
+const AMANDA_PERSONA_ID = 'pb24e3a06698'; // HotOrBot Interviewer - Amanda (Alex persona pccff54d0674 kept for neutral demos)
+const AMANDA_REPLICA_ID = 'r70130f416dd';
+const INTERVIEW_DURATION_SEC = 180; // 3 minutes
+
+// Supabase — using hotorbot project (swap to cohort project when ready)
+const SUPABASE_URL = 'https://dvxkihjlkilmapzaoasg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2eGtpaGpsa2lsbWFwemFvYXNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MDA3MTEsImV4cCI6MjA4NzM3NjcxMX0.bMId5gI4TwHHGjvgV2R4UdA1knCXFUC0b4kBPEjszXE';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const INTERVIEW_GREETING = `Hi! I'm Amanda — the AI version. I'll be your interviewer today. This takes about 3 minutes and what you share here becomes your video profile for the cohort. Ready? Let's start simple: tell me who you are, what you do, and one thing you're genuinely passionate about outside of work.`;
+
+// ─── STATE ───────────────────────────────────────────────────
+let userData = {};
+let callFrame = null;
+let isMuted = false;
+let timerInterval = null;
+let secondsLeft = INTERVIEW_DURATION_SEC;
+let conversationId = null;
+let isStarting = false;
+
+// ─── SCREEN HELPERS ─────────────────────────────────────────
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+function toast(msg, isError = false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show' + (isError ? ' error' : '');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ─── STEP 1: SIGNUP ─────────────────────────────────────────
+function goToPrecall() {
+    const firstName = document.getElementById('first-name').value.trim();
+    const lastName = document.getElementById('last-name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const gender = document.getElementById('gender').value;
+    const seeking = document.getElementById('seeking').value;
+
+    if (!firstName) { toast('Enter your first name', true); return; }
+    if (!email || !email.includes('@')) { toast('Enter a valid email', true); return; }
+    if (!gender) { toast('Select your gender', true); return; }
+    if (!seeking) { toast('Select who you\'re looking for', true); return; }
+
+    userData = { firstName, lastName, email, gender, seeking };
+    showScreen('screen-precall');
+}
+
+// ─── STEP 2: START INTERVIEW ─────────────────────────────────
+async function startInterview() {
+    if (isStarting) return;
+    isStarting = true;
+
+    document.getElementById('call-btn').disabled = true;
+    document.getElementById('connecting-overlay').style.display = 'flex';
+    document.getElementById('connecting-text').textContent = 'Connecting to Amanda AI...';
+    document.getElementById('connecting-sub').textContent = 'Setting up your interview';
+
+    try {
+        // Create Tavus conversation
+        const res = await fetch('https://tavusapi.com/v2/conversations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': TAVUS_API_KEY
+            },
+            body: JSON.stringify({
+                replica_id: AMANDA_REPLICA_ID,
+                persona_id: AMANDA_PERSONA_ID,
+                conversation_name: `HotOrBot Interview — ${userData.firstName} ${userData.lastName}`,
+                custom_greeting: INTERVIEW_GREETING,
+                properties: {
+                    max_call_duration: INTERVIEW_DURATION_SEC + 30, // small buffer
+                    enable_recording: true,
+                    enable_closed_captions: false,
+                    participant_left_timeout: 10
+                }
+            })
+        });
+
+        const data = await res.json();
+        if (!data.conversation_url) throw new Error(data.message || 'Failed to create conversation');
+        conversationId = data.conversation_id;
+
+        // Save signup record to Supabase
+        await db.from('hotorbot_cohort_signups').insert([{
+            first_name: userData.firstName,
+            last_name: userData.lastName,
+            email: userData.email,
+            gender: userData.gender,
+            seeking: userData.seeking,
+            conversation_id: conversationId,
+            status: 'interview_started',
+            created_at: new Date().toISOString()
+        }]).then(({ error }) => {
+            if (error) console.warn('DB insert failed (table may need creation):', error.message);
+        });
+
+        // Join via Daily
+        callFrame = window.DailyIframe.createCallObject();
+
+        function attachTracks() {
+            const participants = callFrame.participants();
+            for (const [, p] of Object.entries(participants)) {
+                if (p.local) {
+                    if (p.videoTrack) {
+                        const lv = document.getElementById('local-video');
+                        const s = new MediaStream([p.videoTrack]);
+                        if (p.audioTrack) s.addTrack(p.audioTrack);
+                        lv.srcObject = s;
+                    }
+                } else {
+                    if (p.videoTrack) {
+                        const rv = document.getElementById('remote-video');
+                        const s = new MediaStream([p.videoTrack]);
+                        if (p.audioTrack) s.addTrack(p.audioTrack);
+                        rv.srcObject = s;
+                        rv.play().catch(() => {});
+                    }
+                    if (p.audioTrack) {
+                        if (!window._remoteAudio) {
+                            window._remoteAudio = new Audio();
+                            window._remoteAudio.autoplay = true;
+                        }
+                        window._remoteAudio.srcObject = new MediaStream([p.audioTrack]);
+                        window._remoteAudio.play().catch(() => {});
+                    }
+                }
+            }
+        }
+
+        callFrame.on('track-started', attachTracks);
+        callFrame.on('participant-joined', attachTracks);
+        callFrame.on('participant-updated', attachTracks);
+
+        callFrame.on('joined-meeting', () => {
+            document.getElementById('connecting-overlay').style.display = 'none';
+            showScreen('screen-call');
+            makeDraggable(document.getElementById('local-video'));
+            startTimer();
+        });
+
+        callFrame.on('left-meeting', () => finishInterview());
+        callFrame.on('error', (e) => {
+            console.error('Daily error:', e);
+            toast('Connection error — try again', true);
+            cleanupCall(false);
+        });
+
+        await callFrame.join({ url: data.conversation_url });
+
+    } catch (err) {
+        document.getElementById('connecting-overlay').style.display = 'none';
+        document.getElementById('call-btn').disabled = false;
+        toast(err.message || 'Connection failed', true);
+        isStarting = false;
+    }
+}
+
+// ─── TIMER ───────────────────────────────────────────────────
+function startTimer() {
+    secondsLeft = INTERVIEW_DURATION_SEC;
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+        secondsLeft--;
+        updateTimerDisplay();
+        if (secondsLeft <= 0) {
+            clearInterval(timerInterval);
+            endInterview();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    const el = document.getElementById('timer');
+    el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+    el.className = 'timer-badge' + (secondsLeft <= 30 ? ' warning' : '');
+}
+
+// ─── END INTERVIEW ───────────────────────────────────────────
+async function endInterview() {
+    if (callFrame) {
+        try { await callFrame.leave(); } catch(e) {}
+    }
+    finishInterview();
+}
+
+async function finishInterview() {
+    cleanupCall(true);
+    clearInterval(timerInterval);
+
+    // Update DB record
+    if (conversationId) {
+        await db.from('hotorbot_cohort_signups')
+            .update({ status: 'interview_complete' })
+            .eq('conversation_id', conversationId)
+            .then(({ error }) => {
+                if (error) console.warn('DB update failed:', error.message);
+            });
+    }
+
+    // Show success
+    document.getElementById('success-name').textContent = userData.firstName || 'you';
+    showScreen('screen-success');
+}
+
+function cleanupCall(finished) {
+    if (callFrame) {
+        try { callFrame.destroy(); } catch(e) {}
+        callFrame = null;
+    }
+    document.getElementById('screen-call').classList.remove('active');
+    document.getElementById('remote-video').srcObject = null;
+    document.getElementById('local-video').srcObject = null;
+    if (!finished) {
+        document.getElementById('call-btn').disabled = false;
+        isStarting = false;
+    }
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────
+function toggleMute() {
+    isMuted = !isMuted;
+    if (callFrame) callFrame.setLocalAudio(!isMuted);
+    const btn = document.getElementById('mute-btn');
+    btn.textContent = isMuted ? '🔇' : '🎤';
+    btn.classList.toggle('muted', isMuted);
+}
+
+let beautyLevel = 0;
+function toggleBeauty() {
+    beautyLevel = (beautyLevel + 1) % 4;
+    const lv = document.getElementById('local-video');
+    lv.classList.remove('beauty-1', 'beauty-2', 'beauty-3');
+    if (beautyLevel > 0) lv.classList.add('beauty-' + beautyLevel);
+    const btn = document.getElementById('beauty-btn');
+    btn.classList.toggle('active', beautyLevel > 0);
+    btn.textContent = beautyLevel > 0 ? '✨' + beautyLevel : '✨';
+}
+
+// ─── DRAGGABLE PIP ───────────────────────────────────────────
+function makeDraggable(el) {
+    let startX, startY, startLeft, startTop;
+    el.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        startX = t.clientX; startY = t.clientY;
+        startLeft = el.offsetLeft; startTop = el.offsetTop;
+        el.style.transition = 'none';
+    }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+        const t = e.touches[0];
+        el.style.left = (startLeft + t.clientX - startX) + 'px';
+        el.style.top = (startTop + t.clientY - startY) + 'px';
+        el.style.right = 'auto';
+    }, { passive: true });
+    el.addEventListener('touchend', () => {
+        el.style.transition = 'all 0.3s ease';
+        const snapRight = (el.getBoundingClientRect().left + el.offsetWidth / 2) > window.innerWidth / 2;
+        el.style.left = snapRight ? 'auto' : '12px';
+        el.style.right = snapRight ? '12px' : 'auto';
+    });
+    el.addEventListener('mousedown', (e) => {
+        startX = e.clientX; startY = e.clientY;
+        startLeft = el.offsetLeft; startTop = el.offsetTop;
+        el.style.transition = 'none';
+        const move = (ev) => {
+            el.style.left = (startLeft + ev.clientX - startX) + 'px';
+            el.style.top = (startTop + ev.clientY - startY) + 'px';
+            el.style.right = 'auto';
+        };
+        const up = () => {
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+            el.style.transition = 'all 0.3s ease';
+        };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+    });
+}
+
+// ─── KEYBOARD NAV ────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const active = document.querySelector('.screen.active');
+        if (active && active.id === 'screen-signup') goToPrecall();
+    }
+});
+</script>
+</body>
+</html>
